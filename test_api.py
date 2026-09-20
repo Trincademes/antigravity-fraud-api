@@ -1,5 +1,5 @@
 """
-Antigravity - Suíte de Testes Automatizados da API (Pytest + FastAPI TestClient)
+FraudGuard - Suíte de Testes Automatizados da API (Pytest + FastAPI TestClient)
 """
 
 import pytest
@@ -31,7 +31,7 @@ def test_dashboard_endpoint(client):
     response = client.get("/dashboard")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
-    assert "ANTIGRAVITY" in response.text
+    assert "FRAUDGUARD" in response.text
     assert "RISK DESK" in response.text
 
 

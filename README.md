@@ -1,4 +1,4 @@
-# 🛡️ Antigravity - High Performance Fraud Detection API
+# 🛡️ FraudGuard - High Performance Fraud Detection API
 
 API de missão crítica e alta performance desenvolvida em **Python** com **FastAPI** e **Scikit-Learn**, arquitetada para detecção preditiva de fraudes em transações financeiras em tempo real (sub-10ms de latência de inferência) e pronta para deploy contínuo no ambiente gratuito do **Render**.
 
@@ -23,18 +23,18 @@ API de missão crítica e alta performance desenvolvida em **Python** com **Fast
 
 ## 🏛️ Visão Geral e Arquitetura
 
-O sistema **Antigravity** adota os princípios de **Clean Architecture** e **Defesa em Profundidade (Defense-in-Depth)**. O fluxo combina heurísticas de segurança determinísticas (regras duras de velocidade e geolocalização) com um pipeline de Machine Learning estocástico baseado em **Random Forest Classifier** com pesos balanceados (`balanced_subsample`).
+O sistema **FraudGuard** adota os princípios de **Clean Architecture** e **Defesa em Profundidade (Defense-in-Depth)**. O fluxo combina heurísticas de segurança determinísticas (regras duras de velocidade e geolocalização) com um pipeline de Machine Learning estocástico baseado em **Random Forest Classifier** com pesos balanceados (`balanced_subsample`).
 
 ```mermaid
 flowchart TD
-    Client([Cliente / Gateway Bancário]) -->|POST /v1/analisar-fraude| API[FastAPI Antigravity]
+    Client([Cliente / Gateway Bancário]) -->|POST /v1/analisar-fraude| API[FastAPI FraudGuard]
     API -->|1. Validação de Tipos e Limites| Pydantic[Pydantic v2 Schema]
     Pydantic -->|2. Checagem Determinística| HardRules{Viagem Impossível?}
     HardRules -->|Sim: Dist >= 1500km & Tempo < 10m| BlockHard[Decisão: BLOQUEADA (Hard Rule)]
     HardRules -->|Não| Pipeline[Scikit-Learn Pipeline]
     Pipeline -->|StandardScaler + OneHotEncoder| Preprocessing[Pré-processamento Vetorial]
     Preprocessing -->|Random Forest Classifier| Model[(fraud_model.pkl)]
-    Model -->|Cálculo de Probabilidade| RiskEngine[Motor de Risco Antigravity]
+    Model -->|Cálculo de Probabilidade| RiskEngine[Motor de Risco FraudGuard]
     RiskEngine -->|Prob >= 0.80| Block[Decisão: BLOQUEADA]
     RiskEngine -->|0.30 <= Prob < 0.80| Review[Decisão: EM_ANALISE]
     RiskEngine -->|Prob < 0.30| Approve[Decisão: APROVADA]

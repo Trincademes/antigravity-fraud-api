@@ -1,5 +1,5 @@
 """
-Antigravity - Simulador de Transações Financeiras em Tempo Real (Enterprise)
+FraudGuard - Simulador de Transações Financeiras em Tempo Real (Enterprise)
 Utiliza a biblioteca padrão para envio de cenários com telemetria bancária avançada.
 """
 
@@ -130,13 +130,13 @@ CENARIOS = [
 def executar_simulacao(base_url: str = DEFAULT_URL):
     base_url = base_url.rstrip("/")
     print("=" * 115)
-    print("🛡️ ANTIGRAVITY RISK DESK - CONSOLE DE TESTES OPERACIONAIS")
+    print("🛡️ FRAUDGUARD RISK DESK - CONSOLE DE TESTES OPERACIONAIS")
     print(f"Alvo: {base_url}")
     print("=" * 115)
 
     # 1. Health Check
     try:
-        req = urllib.request.Request(f"{base_url}/", headers={"User-Agent": "AntigravitySimulator/2.0"})
+        req = urllib.request.Request(f"{base_url}/", headers={"User-Agent": "FraudGuardSimulator/2.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data_health = json.loads(resp.read().decode("utf-8"))
             print(f"Motor: ONLINE | Versão: {data_health.get('versao')} | Modelo Ativo: {data_health.get('modelo_carregado')}\n")
@@ -161,7 +161,7 @@ def executar_simulacao(base_url: str = DEFAULT_URL):
         req = urllib.request.Request(
             endpoint,
             data=dados_json,
-            headers={"Content-Type": "application/json", "User-Agent": "AntigravitySimulator/2.0"}
+            headers={"Content-Type": "application/json", "User-Agent": "FraudGuardSimulator/2.0"}
         )
 
         try:

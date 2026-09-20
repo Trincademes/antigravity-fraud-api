@@ -1,10 +1,10 @@
 # ==============================================================================
-# Antigravity - Dockerfile de Produção Otimizado (Multi-Stage / Lean)
+# FraudGuard - Dockerfile de Produção Otimizado (Multi-Stage / Lean)
 # ==============================================================================
 FROM python:3.11-slim
 
 # Metadados
-LABEL maintainer="Antigravity Team"
+LABEL maintainer="FraudGuard Team"
 LABEL description="API de Alta Performance para Detecção de Fraudes Financeiras"
 
 # Evita geração de arquivos .pyc e força flush imediato do stdout/stderr

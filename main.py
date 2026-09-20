@@ -1,5 +1,5 @@
 """
-Antigravity - API de Detecção de Fraudes Financeiras em Alta Performance
+FraudGuard - API de Detecção de Fraudes Financeiras em Alta Performance
 Framework: FastAPI + Uvicorn
 Arquitetura: Clean Architecture & Microserviço Preditivo para Deploy no Render
 """
@@ -26,10 +26,10 @@ from pydantic import BaseModel, Field, field_validator
 # ---------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [AntigravityAPI] %(message)s",
+    format="%(asctime)s [%(levelname)s] [FraudGuardAPI] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger("antigravity_api")
+logger = logging.getLogger("fraudguard_api")
 
 MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), "fraud_model.pkl"))
 DASHBOARD_HTML_PATH = os.path.join(os.path.dirname(__file__), "dashboard.html")
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    logger.info("Encerrando Antigravity API e liberando recursos...")
+    logger.info("Encerrando FraudGuard API e liberando recursos...")
     app.state.model = None
 
 
@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
 # 3. Inicialização do App FastAPI e CORS
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="Antigravity - Fraud Detection Engine",
+    title="FraudGuard - Financial Risk Engine",
     description=(
         "API de missão crítica para avaliação de risco e detecção de fraudes em transações financeiras em tempo real. "
         "Desenvolvida com FastAPI, Scikit-Learn e arquitetada para alta disponibilidade no Render."

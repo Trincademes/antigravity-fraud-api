@@ -1,5 +1,5 @@
 """
-Antigravity - Pipeline de Treinamento do Modelo de Detecção de Fraudes Enterprise
+FraudGuard - Pipeline de Treinamento do Modelo de Detecção de Fraudes Enterprise
 Autor: Arquiteto de Software & Cientista de Dados Sênior
 Descrição: Gera dataset sintético de padrão bancário com múltiplos vetores de risco:
            idade da conta, tentativas falhas de login, reputação de conexão (VPN/Tor),
@@ -250,7 +250,7 @@ def treinar_e_avaliar():
     """
     Treina o modelo nos dados sintéticos bancários, avalia métricas e persiste o pipeline.
     """
-    logger.info("=== INICIANDO PIPELINE DE TREINAMENTO ANTIGRAVITY ENTERPRISE ===")
+    logger.info("=== INICIANDO PIPELINE DE TREINAMENTO FRAUDGUARD ENTERPRISE ===")
 
     df = gerar_dataset_sintetico()
 

@@ -1,10 +1,10 @@
 # ==============================================================================
-# Antigravity - Blueprint de Infraestrutura como Código (IaC) para o Render
+# FraudGuard - Blueprint de Infraestrutura como Código (IaC) para o Render
 # Documentação oficial: https://render.com/docs/blueprint-spec
 # ==============================================================================
 services:
   - type: web
-    name: antigravity-fraud-api
+    name: fraudguard-api
     runtime: python
     region: oregon
     plan: free
