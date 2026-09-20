@@ -1,9 +1,10 @@
 """
-Antigravity - Pipeline de Treinamento do Modelo de Detecção de Fraudes
+Antigravity - Pipeline de Treinamento do Modelo de Detecção de Fraudes Enterprise
 Autor: Arquiteto de Software & Cientista de Dados Sênior
-Descrição: Gera dataset sintético com padrões verossímeis de transações bancárias,
-           treina um classificador Random Forest calibrado e exporta o pipeline
-           completo (pré-processamento + modelo) em 'fraud_model.pkl'.
+Descrição: Gera dataset sintético de padrão bancário com múltiplos vetores de risco:
+           idade da conta, tentativas falhas de login, reputação de conexão (VPN/Tor),
+           novo favorecido, score bureau de crédito e biometria de dispositivo.
+           Treina um classificador Random Forest calibrado e exporta o pipeline em 'fraud_model.pkl'.
 """
 
 import os
@@ -27,43 +28,47 @@ logging.basicConfig(
 )
 logger = logging.getLogger("train_model")
 
-# Constantes do Modelo
 MODEL_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "fraud_model.pkl")
 RANDOM_SEED = 42
-NUM_SAMPLES = 20_000
-FRAUD_RATIO = 0.03  # 3% de fraudes (desbalanceamento realista)
+NUM_SAMPLES = 25_000
+FRAUD_RATIO = 0.035  # 3.5% de fraudes
 
 NUMERIC_FEATURES = [
     "valor",
     "hora_transacao",
     "tempo_desde_ultima_transacao",
     "distancia_localizacao_km",
-    "score_dispositivo"
+    "score_dispositivo",
+    "idade_conta_meses",
+    "tentativas_falhas_24h",
+    "score_credito_bureau"
 ]
 
 CATEGORICAL_FEATURES = [
-    "tipo_transacao"
+    "tipo_transacao",
+    "tipo_conexao",
+    "beneficiario_novo"
 ]
 
 
 def gerar_dataset_sintetico(n_samples: int = NUM_SAMPLES, fraud_ratio: float = FRAUD_RATIO, seed: int = RANDOM_SEED) -> pd.DataFrame:
     """
-    Gera dataset sintético simulando padrões comportamentais reais de transações financeiras.
-    - Transações Legítimas: valores moderados, horários comerciais, dispositivos confiáveis, distâncias curtas.
-    - Transações Fraudulentas: picos em madrugadas, valores atípicos, alta velocidade/frequência, dispositivos suspeitos.
+    Gera dataset com telemetria bancária avançada:
+    - ATO (Account Takeover), ataques por força bruta, desvio de fundos para laranjas/mulas
+    - Anomalias de conexão (VPN/Tor), contas recém-criadas e bureaus de crédito.
     """
     np.random.seed(seed)
     n_frauds = int(n_samples * fraud_ratio)
     n_legit = n_samples - n_frauds
 
-    logger.info(f"Gerando {n_samples} transações ({n_legit} legítimas e {n_frauds} fraudulentas)...")
+    logger.info(f"Gerando {n_samples} transações bancárias ({n_legit} legítimas e {n_frauds} fraudulentas)...")
 
-    # --- 1. Dados Legítimos ---
-    # Valores: distribuição log-normal (maioria entre R$ 20 e R$ 400, raros acima de R$ 2.000)
-    val_legit = np.random.lognormal(mean=4.2, sigma=0.9, size=n_legit).round(2)
-    val_legit = np.clip(val_legit, 1.0, 15_000.0)
+    # ==========================================
+    # 1. PERFIL TRANSACIONAL LEGÍTIMO
+    # ==========================================
+    val_legit = np.random.lognormal(mean=4.3, sigma=0.9, size=n_legit).round(2)
+    val_legit = np.clip(val_legit, 1.0, 18_000.0)
 
-    # Horas: pico entre 08:00 e 22:00
     prob_hora_legit = np.array([
         0.01, 0.005, 0.005, 0.005, 0.005, 0.01, 0.02, 0.04, 0.06, 0.07, 0.08, 0.08,
         0.08, 0.07, 0.07, 0.06, 0.06, 0.07, 0.07, 0.06, 0.04, 0.03, 0.02, 0.015
@@ -71,19 +76,36 @@ def gerar_dataset_sintetico(n_samples: int = NUM_SAMPLES, fraud_ratio: float = F
     prob_hora_legit = prob_hora_legit / prob_hora_legit.sum()
     hora_legit = np.random.choice(range(24), size=n_legit, p=prob_hora_legit)
 
-    # Tempo desde a última transação (segundos): intervalo normal (ex: minutos a dias)
-    tempo_legit = np.random.exponential(scale=18_000, size=n_legit).round(1)
-    tempo_legit = np.clip(tempo_legit, 120.0, 604_800.0)
+    tempo_legit = np.random.exponential(scale=21_600, size=n_legit).round(1)
+    tempo_legit = np.clip(tempo_legit, 60.0, 604_800.0)
 
-    # Distância geográfica do ponto habitual (km): local habitual (0 a 30 km)
-    dist_legit = np.random.exponential(scale=8.0, size=n_legit).round(2)
-    dist_legit = np.clip(dist_legit, 0.0, 150.0)
+    dist_legit = np.random.exponential(scale=6.0, size=n_legit).round(2)
+    dist_legit = np.clip(dist_legit, 0.0, 120.0)
 
-    # Score de reputação do dispositivo: alto (0.75 a 1.0)
     score_legit = np.random.beta(a=9, b=1.5, size=n_legit).round(3)
     score_legit = np.clip(score_legit, 0.50, 1.0)
 
-    # Canal / Tipo de Transação
+    # Idade da Conta (meses): contas maduras e fidelizadas (média 2.5 anos)
+    idade_legit = np.random.gamma(shape=3.0, scale=10.0, size=n_legit).round(0)
+    idade_legit = np.clip(idade_legit, 1.0, 180.0)
+
+    # Tentativas Falhas de Senha/PIN nas últimas 24h: 96% zero, 3% uma falha, 1% duas
+    tentativas_legit = np.random.choice([0, 1, 2], size=n_legit, p=[0.96, 0.03, 0.01])
+
+    # Score de Crédito no Bureau (300 a 1000): média 740
+    score_cred_legit = np.random.normal(loc=740, scale=110, size=n_legit).round(0)
+    score_cred_legit = np.clip(score_cred_legit, 350.0, 990.0)
+
+    # Beneficiário Novo (cadastrado há menos de 24h): raro (12%)
+    benef_legit = np.random.choice(["NAO", "SIM"], size=n_legit, p=[0.88, 0.12])
+
+    # Tipo de Conexão: residencial ou celular normal
+    conexao_legit = np.random.choice(
+        ["RESIDENCIAL", "MOVEL_4G_5G", "VPN_PROXY", "TOR"],
+        size=n_legit,
+        p=[0.60, 0.38, 0.019, 0.001]
+    )
+
     tipo_legit = np.random.choice(
         ["PIX", "CARTAO_CREDITO", "BOLETO", "TED"],
         size=n_legit,
@@ -96,53 +118,82 @@ def gerar_dataset_sintetico(n_samples: int = NUM_SAMPLES, fraud_ratio: float = F
         "tempo_desde_ultima_transacao": tempo_legit,
         "distancia_localizacao_km": dist_legit,
         "score_dispositivo": score_legit,
+        "idade_conta_meses": idade_legit,
+        "tentativas_falhas_24h": tentativas_legit,
+        "score_credito_bureau": score_cred_legit,
+        "beneficiario_novo": benef_legit,
+        "tipo_conexao": conexao_legit,
         "tipo_transacao": tipo_legit,
         "is_fraude": 0
     })
 
-    # --- 2. Dados Fraudulentos (Modelagem com Múltiplas Tipologias de Fraude) ---
-    # Tipologias representadas:
-    # 1. Invasão de Conta (ATO): valor alto, score baixo, madrugada.
-    # 2. Ataque de Velocidade (Burst): tempo muito curto entre transações, dispositivo suspeito.
-    # 3. Anomalia Geográfica: distância muito elevada da residência.
-    # 4. Saque Noturno Imediato: PIX de madrugada com valores elevados.
-    val_fraud = np.random.lognormal(mean=7.8, sigma=1.1, size=n_frauds).round(2)
-    val_fraud = np.clip(val_fraud, 300.0, 50_000.0)
+    # ==========================================
+    # 2. PERFIL TRANSACIONAL FRAUDULENTO
+    # ==========================================
+    val_fraud = np.random.lognormal(mean=7.9, sigma=1.0, size=n_frauds).round(2)
+    val_fraud = np.clip(val_fraud, 250.0, 50_000.0)
 
-    # Horas: picos expressivos na madrugada (00:00 às 05:00)
+    # Madrugada / Horários de baixa vigilância
     prob_hora_fraud = np.array([
-        0.12, 0.14, 0.14, 0.12, 0.10, 0.06, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01,
+        0.13, 0.15, 0.15, 0.13, 0.10, 0.05, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01,
         0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.03, 0.04, 0.05
     ])
     prob_hora_fraud = prob_hora_fraud / prob_hora_fraud.sum()
     hora_fraud = np.random.choice(range(24), size=n_frauds, p=prob_hora_fraud)
 
-    # Tempo desde a última transação: 60% são rajadas (< 90s), 40% são intervalos variáveis
-    is_burst = np.random.rand(n_frauds) < 0.60
+    # Ataques em rajada (Burst) vs ataques espaçados
+    is_burst = np.random.rand(n_frauds) < 0.65
     tempo_fraud = np.where(
         is_burst,
-        np.random.exponential(scale=35.0, size=n_frauds).round(1),
-        np.random.exponential(scale=1800.0, size=n_frauds).round(1)
+        np.random.exponential(scale=30.0, size=n_frauds).round(1),
+        np.random.exponential(scale=2400.0, size=n_frauds).round(1)
     )
     tempo_fraud = np.clip(tempo_fraud, 1.0, 7200.0)
 
-    # Distância geográfica: mistura de anomalias locais (dispositivo adulterado) e remotas
-    is_distant = np.random.rand(n_frauds) < 0.50
+    # Distância Geográfica Anômala
+    is_distant = np.random.rand(n_frauds) < 0.55
     dist_fraud = np.where(
         is_distant,
-        np.random.uniform(low=250.0, high=3_500.0, size=n_frauds).round(2),
-        np.random.exponential(scale=20.0, size=n_frauds).round(2)
+        np.random.uniform(low=200.0, high=3_500.0, size=n_frauds).round(2),
+        np.random.exponential(scale=18.0, size=n_frauds).round(2)
     )
 
-    # Score do dispositivo: predominantemente baixo (0.01 a 0.40)
+    # Score de Hardware / Dispositivo comprometido
     score_fraud = np.random.beta(a=1.2, b=6.0, size=n_frauds).round(3)
     score_fraud = np.clip(score_fraud, 0.01, 0.45)
 
-    # Canal / Tipo: PIX e Cartão sem presença física dominam os ataques
+    # Idade da Conta: Contas mulas recém-abertas (< 3 meses) ou sequestradas
+    idade_fraud = np.random.choice(
+        [1.0, 2.0, 3.0, 6.0, 12.0, 24.0],
+        size=n_frauds,
+        p=[0.45, 0.25, 0.15, 0.08, 0.05, 0.02]
+    )
+
+    # Tentativas Falhas prévias de autenticação (credential stuffing, force login)
+    tentativas_fraud = np.random.choice(
+        [0, 1, 2, 3, 4, 5],
+        size=n_frauds,
+        p=[0.15, 0.25, 0.30, 0.18, 0.08, 0.04]
+    )
+
+    # Score de Crédito: contas descartáveis têm score mais baixo
+    score_cred_fraud = np.random.normal(loc=420, scale=130, size=n_frauds).round(0)
+    score_cred_fraud = np.clip(score_cred_fraud, 150.0, 680.0)
+
+    # Beneficiário Novo: 88% das fraudes transferem para chaves PIX/contas nunca vistas
+    benef_fraud = np.random.choice(["NAO", "SIM"], size=n_frauds, p=[0.12, 0.88])
+
+    # Conexão Anônima (VPN, Proxies, Tor)
+    conexao_fraud = np.random.choice(
+        ["RESIDENCIAL", "MOVEL_4G_5G", "VPN_PROXY", "TOR"],
+        size=n_frauds,
+        p=[0.05, 0.20, 0.50, 0.25]
+    )
+
     tipo_fraud = np.random.choice(
         ["PIX", "CARTAO_CREDITO", "BOLETO", "TED"],
         size=n_frauds,
-        p=[0.70, 0.25, 0.01, 0.04]
+        p=[0.72, 0.24, 0.01, 0.03]
     )
 
     df_fraud = pd.DataFrame({
@@ -151,11 +202,15 @@ def gerar_dataset_sintetico(n_samples: int = NUM_SAMPLES, fraud_ratio: float = F
         "tempo_desde_ultima_transacao": tempo_fraud,
         "distancia_localizacao_km": dist_fraud,
         "score_dispositivo": score_fraud,
+        "idade_conta_meses": idade_fraud,
+        "tentativas_falhas_24h": tentativas_fraud,
+        "score_credito_bureau": score_cred_fraud,
+        "beneficiario_novo": benef_fraud,
+        "tipo_conexao": conexao_fraud,
         "tipo_transacao": tipo_fraud,
         "is_fraude": 1
     })
 
-    # Unificação e embaralhamento
     df = pd.concat([df_legit, df_fraud], ignore_index=True)
     df = df.sample(frac=1.0, random_state=seed).reset_index(drop=True)
     return df
@@ -164,7 +219,7 @@ def gerar_dataset_sintetico(n_samples: int = NUM_SAMPLES, fraud_ratio: float = F
 def criar_pipeline_modelo() -> Pipeline:
     """
     Constrói a arquitetura do Scikit-Learn Pipeline com pré-processamento integrado.
-    Garante idempotência: os dados de entrada na API não requerem transformações manuais.
+    StandardScaler para features contínuas e OneHotEncoder para variáveis categóricas.
     """
     preprocessor = ColumnTransformer(
         transformers=[
@@ -175,9 +230,9 @@ def criar_pipeline_modelo() -> Pipeline:
     )
 
     classifier = RandomForestClassifier(
-        n_estimators=120,
-        max_depth=12,
-        min_samples_leaf=3,
+        n_estimators=140,
+        max_depth=14,
+        min_samples_leaf=2,
         class_weight="balanced_subsample",
         random_state=RANDOM_SEED,
         n_jobs=-1
@@ -193,9 +248,9 @@ def criar_pipeline_modelo() -> Pipeline:
 
 def treinar_e_avaliar():
     """
-    Função principal: gera dados, treina o modelo, avalia métricas essenciais e persiste o artefato.
+    Treina o modelo nos dados sintéticos bancários, avalia métricas e persiste o pipeline.
     """
-    logger.info("=== INICIANDO PIPELINE DE TREINAMENTO ANTIGRAVITY ===")
+    logger.info("=== INICIANDO PIPELINE DE TREINAMENTO ANTIGRAVITY ENTERPRISE ===")
 
     df = gerar_dataset_sintetico()
 
@@ -210,7 +265,7 @@ def treinar_e_avaliar():
 
     pipeline = criar_pipeline_modelo()
 
-    logger.info("Treinando modelo Random Forest com pré-processamento acoplado...")
+    logger.info("Treinando modelo Random Forest com 11 features integradas...")
     pipeline.fit(X_train, y_train)
 
     logger.info("Avaliando modelo no conjunto de teste...")
@@ -222,25 +277,29 @@ def treinar_e_avaliar():
     logger.info(f"\nRelatório de Classificação:\n{classification_report(y_test, y_pred, target_names=['Legítima', 'Fraude'])}")
     logger.info(f"\nMatriz de Confusão:\n{confusion_matrix(y_test, y_pred)}")
 
-    # Salva o binário do modelo com compressão otimizada
     logger.info(f"Salvando artefato binário em '{MODEL_OUTPUT_PATH}'...")
     joblib.dump(pipeline, MODEL_OUTPUT_PATH, compress=3)
     logger.info("Artefato salvo com sucesso!")
 
-    # Teste de Sanidade (Smoke Test com predição unitária)
-    logger.info("Executando Smoke Test com predição unitária...")
+    # Smoke Test
+    logger.info("Executando Smoke Test com amostra de Invasão de Conta (ATO)...")
     modelo_carregado = joblib.load(MODEL_OUTPUT_PATH)
     amostra_teste = pd.DataFrame([{
-        "valor": 7500.0,
+        "valor": 12000.0,
         "hora_transacao": 3,
-        "tempo_desde_ultima_transacao": 15.0,
-        "distancia_localizacao_km": 1200.0,
-        "score_dispositivo": 0.12,
+        "tempo_desde_ultima_transacao": 25.0,
+        "distancia_localizacao_km": 150.0,
+        "score_dispositivo": 0.05,
+        "idade_conta_meses": 2.0,
+        "tentativas_falhas_24h": 3,
+        "score_credito_bureau": 380.0,
+        "beneficiario_novo": "SIM",
+        "tipo_conexao": "VPN_PROXY",
         "tipo_transacao": "PIX"
     }])
     prob_fraude = modelo_carregado.predict_proba(amostra_teste)[0][1]
-    logger.info(f"Smoke Test: Probabilidade calculada para amostra de alto risco: {prob_fraude:.4f}")
-    assert prob_fraude > 0.5, "O teste de sanidade falhou: a amostra de alto risco não foi identificada!"
+    logger.info(f"Smoke Test: Probabilidade calculada para amostra ATO: {prob_fraude:.4f}")
+    assert prob_fraude > 0.75, "O teste de sanidade falhou!"
     logger.info("=== TREINAMENTO CONCLUÍDO COM ÊXITO ===")
 
 

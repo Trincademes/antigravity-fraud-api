@@ -100,6 +100,18 @@ class TipoTransacaoEnum(str, Enum):
     TED = "TED"
 
 
+class TipoConexaoEnum(str, Enum):
+    RESIDENCIAL = "RESIDENCIAL"
+    MOVEL_4G_5G = "MOVEL_4G_5G"
+    VPN_PROXY = "VPN_PROXY"
+    TOR = "TOR"
+
+
+class BeneficiarioNovoEnum(str, Enum):
+    NAO = "NAO"
+    SIM = "SIM"
+
+
 class StatusDecisaoEnum(str, Enum):
     BLOQUEADA = "BLOQUEADA"
     EM_ANALISE = "EM_ANALISE"
@@ -143,20 +155,51 @@ class TransacaoInput(BaseModel):
     distancia_localizacao_km: float = Field(
         ...,
         ge=0.0,
-        description="Distância estimada (em km) entre a localização da transação e o domicílio usual",
+        description="Distância estimada (em km) entre a localização da transação e o domicílio habitual",
         examples=[12.5]
     )
     score_dispositivo: float = Field(
         ...,
         ge=0.0,
         le=1.0,
-        description="Score de reputação e autenticidade do dispositivo (0.0 = alto risco / emulador, 1.0 = confiável)",
+        description="Score de reputação e autenticidade do dispositivo (0.0 = emulador/novo, 1.0 = confiável)",
         examples=[0.95]
     )
     tipo_transacao: TipoTransacaoEnum = Field(
         default=TipoTransacaoEnum.PIX,
         description="Canal ou meio de pagamento utilizado",
         examples=["PIX"]
+    )
+    # Parâmetros Avançados de Risco Bancário (Enterprise)
+    idade_conta_meses: float = Field(
+        default=24.0,
+        ge=0.0,
+        description="Idade da conta bancária do titular em meses",
+        examples=[36.0]
+    )
+    tentativas_falhas_24h: int = Field(
+        default=0,
+        ge=0,
+        le=20,
+        description="Contagem de tentativas incorretas de senha/biometria nas últimas 24h",
+        examples=[0]
+    )
+    score_credito_bureau: float = Field(
+        default=750.0,
+        ge=0.0,
+        le=1000.0,
+        description="Score de crédito nos órgãos regulatórios/bureaus (0 a 1000)",
+        examples=[780.0]
+    )
+    beneficiario_novo: BeneficiarioNovoEnum = Field(
+        default=BeneficiarioNovoEnum.NAO,
+        description="Indica se o favorecido/chave PIX foi cadastrado há menos de 24 horas",
+        examples=["NAO"]
+    )
+    tipo_conexao: TipoConexaoEnum = Field(
+        default=TipoConexaoEnum.RESIDENCIAL,
+        description="Classificação da rede de conexão (Residencial, Móvel, VPN, Tor)",
+        examples=["RESIDENCIAL"]
     )
 
     @field_validator("valor")
@@ -184,6 +227,10 @@ class AnaliseFraudeResponse(BaseModel):
         description="Score normalizado de risco de 0 a 100"
     )
     motivo: str
+    fatores_risco: list[str] = Field(
+        default_factory=list,
+        description="Indicadores técnicos de risco detectados para auditoria de compliance"
+    )
     latencia_ms: float
     data_processamento: datetime
 
@@ -271,10 +318,13 @@ async def analisar_fraude(transacao: TransacaoInput):
             detail="O motor antifraude está temporariamente indisponível. O modelo preditivo não foi carregado."
         )
 
-    # 1. Regra de Defesa em Profundidade (Deterministic Hard Rule - Viagem Impossível)
-    # Exemplo: Deslocamento > 1500km com tempo < 10 minutos (600s)
+    # 1. Regras Determinísticas de Defesa em Profundidade (Hard Rules)
+    fatores: list[str] = []
+
+    # Heurística 1: Viagem Impossível
     if transacao.distancia_localizacao_km >= 1500.0 and transacao.tempo_desde_ultima_transacao < 600.0:
         latencia = round((time.perf_counter() - inicio_tempo) * 1000, 2)
+        fatores.append("Deslocamento geográfico fisicamente impossível (velocidade > 9.000 km/h).")
         logger.warning(f"Transação {transacao.id_transacao} BLOQUEADA via Hard-Rule: Viagem Impossível.")
         return AnaliseFraudeResponse(
             id_transacao=transacao.id_transacao,
@@ -283,6 +333,23 @@ async def analisar_fraude(transacao: TransacaoInput):
             probabilidade_fraude=0.9999,
             score_risco=100.0,
             motivo="Bloqueio determinístico de segurança: Deslocamento físico incompatível com o intervalo de tempo (Viagem Impossível).",
+            fatores_risco=fatores,
+            latencia_ms=latencia,
+            data_processamento=datetime.now(timezone.utc)
+        )
+
+    # Heurística 2: Conexão TOR com Alto Valor
+    if transacao.tipo_conexao == TipoConexaoEnum.TOR and transacao.valor >= 2000.0:
+        latencia = round((time.perf_counter() - inicio_tempo) * 1000, 2)
+        fatores.append("Transação de alto valor originada via rede anonimizada TOR.")
+        return AnaliseFraudeResponse(
+            id_transacao=transacao.id_transacao,
+            id_usuario=transacao.id_usuario,
+            status=StatusDecisaoEnum.BLOQUEADA,
+            probabilidade_fraude=0.9990,
+            score_risco=99.9,
+            motivo="Bloqueio de conformidade: Acesso originado por nó de saída TOR em operação acima do limite cautelar.",
+            fatores_risco=fatores,
             latencia_ms=latencia,
             data_processamento=datetime.now(timezone.utc)
         )
@@ -294,6 +361,11 @@ async def analisar_fraude(transacao: TransacaoInput):
         "tempo_desde_ultima_transacao": transacao.tempo_desde_ultima_transacao,
         "distancia_localizacao_km": transacao.distancia_localizacao_km,
         "score_dispositivo": transacao.score_dispositivo,
+        "idade_conta_meses": transacao.idade_conta_meses,
+        "tentativas_falhas_24h": transacao.tentativas_falhas_24h,
+        "score_credito_bureau": transacao.score_credito_bureau,
+        "beneficiario_novo": transacao.beneficiario_novo.value,
+        "tipo_conexao": transacao.tipo_conexao.value,
         "tipo_transacao": transacao.tipo_transacao.value
     }])
 
@@ -308,23 +380,37 @@ async def analisar_fraude(transacao: TransacaoInput):
             detail="Falha interna durante o cálculo probabilístico da transação."
         )
 
-    # 4. Aplicação das Regras de Negócio e Matriz de Decisão
-    # Limiares de Decisão:
-    #   Prob >= 0.80 -> BLOQUEADA
-    #   0.30 <= Prob < 0.80 -> EM_ANALISE
-    #   Prob < 0.30 -> APROVADA
+    # 4. Atribuição de Fatores de Risco para Auditoria
+    if transacao.distancia_localizacao_km >= 300.0:
+        fatores.append(f"Distância atípica do domicílio habitual ({transacao.distancia_localizacao_km:.0f} km)")
+    if transacao.tipo_conexao in (TipoConexaoEnum.TOR, TipoConexaoEnum.VPN_PROXY):
+        fatores.append(f"Conexão mascarada ({transacao.tipo_conexao.value})")
+    if transacao.tentativas_falhas_24h >= 1:
+        fatores.append(f"{transacao.tentativas_falhas_24h} falha(s) de autenticação nas últimas 24h")
+    if transacao.beneficiario_novo == BeneficiarioNovoEnum.SIM:
+        fatores.append("Favorecido / chave PIX cadastrado há menos de 24h")
+    if transacao.idade_conta_meses <= 3.0:
+        fatores.append(f"Conta recente (< 3 meses)")
+    if transacao.score_dispositivo <= 0.35:
+        fatores.append("Hardware com baixa confiabilidade / suspeita de emulador")
+    if transacao.hora_transacao in [0, 1, 2, 3, 4, 5]:
+        fatores.append("Operação na madrugada (janela de risco bancário)")
+    if transacao.score_credito_bureau < 450:
+        fatores.append(f"Score bureau restritivo ({int(transacao.score_credito_bureau)}/1000)")
+
+    # 5. Aplicação das Regras de Negócio e Matriz de Decisão
     score_risco = round(probabilidade_fraude * 100, 2)
     prob_formatada = round(probabilidade_fraude, 4)
 
     if probabilidade_fraude >= 0.80:
         decisao = StatusDecisaoEnum.BLOQUEADA
-        motivo = f"Risco crítico detectado ({score_risco}/100). Padrões severos de fraude identificados pelo classificador."
+        motivo = f"Risco crítico ({score_risco}/100). Alta probabilidade de invasão de conta ou golpe financeiro."
     elif probabilidade_fraude >= 0.30:
         decisao = StatusDecisaoEnum.EM_ANALISE
-        motivo = f"Risco intermediário ({score_risco}/100). Operação retida para desafio multifator (2FA) ou mesa de análise."
+        motivo = f"Risco moderado ({score_risco}/100). Indicadores comportamentais atípicos exigem validação (2FA)."
     else:
         decisao = StatusDecisaoEnum.APROVADA
-        motivo = f"Transação segura ({score_risco}/100). Operação dentro dos padrões habituais de consumo."
+        motivo = f"Transação segura ({score_risco}/100). Operação em conformidade com o histórico transacional."
 
     latencia = round((time.perf_counter() - inicio_tempo) * 1000, 2)
 
@@ -340,6 +426,7 @@ async def analisar_fraude(transacao: TransacaoInput):
         probabilidade_fraude=prob_formatada,
         score_risco=score_risco,
         motivo=motivo,
+        fatores_risco=fatores,
         latencia_ms=latencia,
         data_processamento=datetime.now(timezone.utc)
     )

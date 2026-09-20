@@ -31,8 +31,8 @@ def test_dashboard_endpoint(client):
     response = client.get("/dashboard")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
-    assert "Antigravity" in response.text
-    assert "Painel de Gestão" in response.text
+    assert "ANTIGRAVITY" in response.text
+    assert "RISK DESK" in response.text
 
 
 def test_transacao_aprovada(client):
@@ -45,7 +45,12 @@ def test_transacao_aprovada(client):
         "tempo_desde_ultima_transacao": 43200.0,
         "distancia_localizacao_km": 5.0,
         "score_dispositivo": 0.95,
-        "tipo_transacao": "PIX"
+        "tipo_transacao": "PIX",
+        "idade_conta_meses": 36.0,
+        "tentativas_falhas_24h": 0,
+        "score_credito_bureau": 780.0,
+        "beneficiario_novo": "NAO",
+        "tipo_conexao": "RESIDENCIAL"
     }
     response = client.post("/v1/analisar-fraude", json=payload)
     assert response.status_code == 200
@@ -55,20 +60,25 @@ def test_transacao_aprovada(client):
     assert data["probabilidade_fraude"] < 0.30
     assert data["score_risco"] < 30.0
     assert data["latencia_ms"] > 0
-    assert "padrões habituais" in data["motivo"]
+    assert "conformidade" in data["motivo"] or "segura" in data["motivo"]
 
 
 def test_transacao_bloqueada_ml(client):
-    """Testa detecção estocástica de fraude via Random Forest (sem disparar hard-rule)."""
+    """Testa detecção estocástica de fraude via Random Forest com novos vetores."""
     payload = {
         "id_transacao": "tx-test-fraud-002",
         "id_usuario": "usr-test-999",
         "valor": 15000.00,
         "hora_transacao": 3,
         "tempo_desde_ultima_transacao": 20.0,
-        "distancia_localizacao_km": 12.0,
+        "distancia_localizacao_km": 120.0,
         "score_dispositivo": 0.03,
-        "tipo_transacao": "PIX"
+        "tipo_transacao": "PIX",
+        "idade_conta_meses": 1.0,
+        "tentativas_falhas_24h": 3,
+        "score_credito_bureau": 350.0,
+        "beneficiario_novo": "SIM",
+        "tipo_conexao": "VPN_PROXY"
     }
     response = client.post("/v1/analisar-fraude", json=payload)
     assert response.status_code == 200
@@ -77,7 +87,7 @@ def test_transacao_bloqueada_ml(client):
     assert data["status"] == "BLOQUEADA"
     assert data["probabilidade_fraude"] >= 0.80
     assert data["score_risco"] >= 80.0
-    assert "classificador" in data["motivo"] or "crítico" in data["motivo"]
+    assert len(data["fatores_risco"]) > 0
 
 
 def test_viagem_impossivel_hard_rule(client):
@@ -98,6 +108,26 @@ def test_viagem_impossivel_hard_rule(client):
     assert data["status"] == "BLOQUEADA"
     assert data["score_risco"] == 100.0
     assert "Viagem Impossível" in data["motivo"]
+
+
+def test_tor_network_hard_rule(client):
+    """Testa regra determinística de conexão via rede anonimizada TOR com valor elevado."""
+    payload = {
+        "id_transacao": "tx-test-tor-004",
+        "id_usuario": "usr-test-888",
+        "valor": 5000.00,
+        "hora_transacao": 14,
+        "tempo_desde_ultima_transacao": 5000.0,
+        "distancia_localizacao_km": 10.0,
+        "score_dispositivo": 0.80,
+        "tipo_transacao": "PIX",
+        "tipo_conexao": "TOR"
+    }
+    response = client.post("/v1/analisar-fraude", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "BLOQUEADA"
+    assert "TOR" in data["motivo"]
 
 
 def test_validacao_pydantic_valor_invalido(client):
