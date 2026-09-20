@@ -26,6 +26,15 @@ def test_health_check(client):
     assert "ambiente" in data
 
 
+def test_dashboard_endpoint(client):
+    """Testa se a interface visual HTML do painel financeiro é carregada com sucesso."""
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+    assert "Antigravity" in response.text
+    assert "Painel de Gestão" in response.text
+
+
 def test_transacao_aprovada(client):
     """Testa uma transação com comportamento padrão e baixo risco."""
     payload = {

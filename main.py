@@ -17,7 +17,7 @@ import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, field_validator
 
@@ -32,6 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger("antigravity_api")
 
 MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), "fraud_model.pkl"))
+DASHBOARD_HTML_PATH = os.path.join(os.path.dirname(__file__), "dashboard.html")
 
 # ---------------------------------------------------------------------------
 # 2. Ciclo de Vida da Aplicação (FastAPI Lifespan)
@@ -341,6 +342,25 @@ async def analisar_fraude(transacao: TransacaoInput):
         motivo=motivo,
         latencia_ms=latencia,
         data_processamento=datetime.now(timezone.utc)
+    )
+
+
+@app.get(
+    "/dashboard",
+    response_class=HTMLResponse,
+    tags=["Interface Visual"],
+    summary="Painel Interativo de Gestão Antifraude",
+    description="Interface amigável para analistas de risco e finanças realizarem análises em tempo real."
+)
+@app.get("/app", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard():
+    """Entrega a interface visual moderna (Fintech Dashboard) para uso do time financeiro."""
+    if os.path.exists(DASHBOARD_HTML_PATH):
+        with open(DASHBOARD_HTML_PATH, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(
+        content="<h2>Painel em atualização. Arquivo dashboard.html não encontrado.</h2>",
+        status_code=404
     )
 
 

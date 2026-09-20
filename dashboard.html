@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity | Painel de Gestão e Análise de Risco Antifraude</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Transições suaves */
+    .transition-all { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+  </style>
+</head>
+<body class="h-full font-sans antialiased flex flex-col bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
+
+  <!-- Navbar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">Antigravity</span>
+          <span class="text-xs ml-2 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20">Risk Engine</span>
+        </div>
+      </div>
+
+      <!-- Status Pills -->
+      <div class="flex items-center space-x-3 text-xs">
+        <div id="status-pill" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="status-text">Motor Online</span>
+        </div>
+        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>Random Forest Calibrado</span>
+        </div>
+        <a href="/docs" target="_blank" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 transition-all">
+          <i data-lucide="code" class="w-3.5 h-3.5"></i>
+          <span>Swagger API</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Quick Test Scenarios -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+        <div class="flex items-center space-x-2 text-sm font-semibold text-slate-300">
+          <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+          <span>Cenários de Teste Rápido (1 Clique para preencher):</span>
+        </div>
+        <span class="text-xs text-slate-500">Selecione para carregar parâmetros reais de fraude bancária</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <button type="button" onclick="carregarCenario('legit')" class="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 transition-all text-left">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>🟢 Compra Normal (R$ 85)</span>
+        </button>
+        <button type="button" onclick="carregarCenario('review')" class="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition-all text-left">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span>🟡 Noturna Moderada (R$ 1.200)</span>
+        </button>
+        <button type="button" onclick="carregarCenario('ato')" class="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition-all text-left">
+          <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+          <span>🔴 Invasão de Conta (R$ 14.850)</span>
+        </button>
+        <button type="button" onclick="carregarCenario('viagem')" class="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-red-600/10 hover:bg-red-600/20 border border-red-500/40 text-red-300 transition-all text-left">
+          <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+          <span>🔴 Viagem Impossível (2.900 km)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Core Grid: Form (Left) & Result (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Form Card (7 Cols) -->
+      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl shadow-black/40">
+        <div class="flex items-center justify-between pb-5 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+              Dados da Transação Financeira
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Preencha os dados abaixo ou use os atalhos acima para submeter ao motor de IA.</p>
+          </div>
+          <button type="button" onclick="gerarNovoId()" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Novo ID</span>
+          </button>
+        </div>
+
+        <form id="form-analise" onsubmit="analisarTransacao(event)" class="mt-6 space-y-5">
+          <!-- IDs Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ID da Transação</label>
+              <input type="text" id="id_transacao" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ID do Cliente / Titular</label>
+              <input type="text" id="id_usuario" required value="usr-financeiro-102" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono">
+            </div>
+          </div>
+
+          <!-- Valor e Canal Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Valor da Transação (R$)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-semibold text-sm">R$</span>
+                <input type="number" step="0.01" min="0.01" max="10000000" id="valor" required value="85.50" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm font-semibold text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Canal / Meio de Pagamento</label>
+              <select id="tipo_transacao" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all">
+                <option value="PIX">⚡ PIX (Instantâneo)</option>
+                <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+                <option value="TED">🏦 TED Bancária</option>
+                <option value="BOLETO">📄 Boleto Bancário</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Horário e Velocidade Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Horário da Transação</label>
+                <span id="hora-badge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">14:00 (Comercial)</span>
+              </div>
+              <input type="range" min="0" max="23" value="14" id="hora_transacao" oninput="atualizarHora(this.value)" class="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                <span>00h (Madrugada)</span>
+                <span>12h (Almoço)</span>
+                <span>23h (Noite)</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Tempo desde a Última Operação</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="number" min="0" step="1" id="tempo_input" value="360" oninput="atualizarSegundos()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+                <select id="tempo_unidade" onchange="atualizarSegundos()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2.5 text-xs text-slate-300 focus:outline-none">
+                  <option value="minutos" selected>Minutos</option>
+                  <option value="segundos">Segundos</option>
+                  <option value="horas">Horas</option>
+                  <option value="dias">Dias</option>
+                </select>
+              </div>
+              <input type="hidden" id="tempo_desde_ultima_transacao" value="21600.0">
+            </div>
+          </div>
+
+          <!-- Distância e Dispositivo Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Distância da Residência Habitual</label>
+              <div class="relative">
+                <input type="number" step="0.1" min="0" id="distancia_localizacao_km" required value="3.5" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 font-semibold pr-12">
+                <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500 text-xs font-semibold">km</span>
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">Acima de 1.500 km em janela curta aciona bloqueio determinístico.</p>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Score do Dispositivo (Confiança)</label>
+                <span id="score-badge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">95% (Conhecido)</span>
+              </div>
+              <input type="range" min="1" max="100" value="95" id="score_slider" oninput="atualizarScore(this.value)" class="w-full accent-emerald-500 bg-slate-800 rounded-lg cursor-pointer">
+              <input type="hidden" id="score_dispositivo" value="0.95">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                <span>0% (Emulador / Novo)</span>
+                <span>100% (Habitual)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-2">
+            <button type="submit" id="btn-submit" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all cursor-pointer">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+              <span>Avaliar Risco com Inteligência Artificial</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Decision Card (5 Cols) -->
+      <div class="lg:col-span-5 flex flex-col space-y-6">
+
+        <!-- Result Box -->
+        <div id="resultado-card" class="flex-1 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl shadow-black/40 flex flex-col justify-between relative overflow-hidden transition-all">
+          <!-- Background Glow -->
+          <div id="bg-glow" class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none transition-all"></div>
+
+          <div>
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div class="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <i data-lucide="scale" class="w-4 h-4 text-indigo-400"></i>
+                <span>Veredito Antifraude</span>
+              </div>
+              <span id="latencia-badge" class="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Pronto para análise</span>
+            </div>
+
+            <!-- Empty / Initial Placeholder -->
+            <div id="placeholder-box" class="py-16 text-center space-y-3">
+              <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-400">
+                <i data-lucide="scan" class="w-8 h-8"></i>
+              </div>
+              <h3 class="text-sm font-semibold text-slate-300">Nenhuma transação analisada</h3>
+              <p class="text-xs text-slate-500 max-w-xs mx-auto">Preencha o formulário ao lado ou selecione um dos cenários rápidos para acionar a predição.</p>
+            </div>
+
+            <!-- Active Result View (Hidden initially) -->
+            <div id="resultado-view" class="hidden pt-6 space-y-6">
+              <!-- Big Badge -->
+              <div class="text-center space-y-2">
+                <div id="status-badge-container" class="inline-flex items-center space-x-2.5 px-6 py-2.5 rounded-2xl text-base font-extrabold shadow-lg">
+                  <span id="status-icon"></span>
+                  <span id="status-nome">APROVADA</span>
+                </div>
+                <div class="text-xs text-slate-400 font-mono" id="tx-id-display">tx-0000</div>
+              </div>
+
+              <!-- Risk Score Meter -->
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4.5 space-y-3">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-semibold text-slate-400">Score de Risco da Operação</span>
+                  <span id="score-numero" class="text-lg font-black font-mono text-emerald-400">2.1 / 100</span>
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                  <div id="score-barra" class="h-full bg-emerald-500 rounded-full transition-all duration-700" style="width: 2%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>0 (Segura)</span>
+                  <span>30 (Limiar Análise)</span>
+                  <span>80 (Limiar Bloqueio)</span>
+                  <span>100</span>
+                </div>
+              </div>
+
+              <!-- Motivo & Ação de Compliance -->
+              <div class="space-y-3">
+                <div class="bg-slate-950/60 border border-slate-800/60 rounded-xl p-3.5 space-y-1">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Diagnóstico da IA:</span>
+                  <p id="motivo-texto" class="text-xs text-slate-300 leading-relaxed font-medium"></p>
+                </div>
+
+                <div id="recomendacao-box" class="rounded-xl p-3.5 border flex items-start space-x-2.5">
+                  <i id="rec-icon" data-lucide="check-circle-2" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                  <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider block" id="rec-titulo">Ação Recomendada:</span>
+                    <span class="text-xs font-semibold" id="rec-texto"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Info inside card -->
+          <div class="pt-4 mt-6 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Validação de Compliance Bancário</span>
+            <span id="timestamp-display">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session History Table -->
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl shadow-black/40 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+          <h3 class="text-base font-bold text-white">Histórico de Transações Desta Sessão</h3>
+        </div>
+        <button type="button" onclick="limparHistorico()" class="text-xs text-slate-400 hover:text-slate-200 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all">
+          Limpar Lista
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/60 border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">Horário</th>
+              <th class="py-3 px-4">ID Transação</th>
+              <th class="py-3 px-4">Cliente</th>
+              <th class="py-3 px-4">Canal</th>
+              <th class="py-3 px-4">Valor</th>
+              <th class="py-3 px-4">Score</th>
+              <th class="py-3 px-4">Decisão</th>
+              <th class="py-3 px-4">Latência</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-historico" class="divide-y divide-slate-800/60 font-mono">
+            <tr id="empty-row">
+              <td colspan="8" class="text-center py-8 text-slate-500 font-sans">Nenhuma transação analisada nesta sessão ainda.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Scripts Interativos -->
+  <script>
+    // Inicialização
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      gerarNovoId();
+      atualizarSegundos();
+      verificarStatusAPI();
+    });
+
+    function gerarNovoId() {
+      const id = "tx-" + Math.random().toString(36).substring(2, 10) + "-" + Date.now().toString(36);
+      document.getElementById("id_transacao").value = id;
+    }
+
+    function atualizarHora(h) {
+      const hInt = parseInt(h);
+      let desc = "Comercial";
+      let cor = "text-slate-300";
+      if (hInt >= 0 && hInt <= 5) {
+        desc = "Madrugada (Alto Risco)";
+        cor = "text-rose-400 font-bold";
+      } else if (hInt >= 6 && hInt <= 11) {
+        desc = "Manhã";
+      } else if (hInt >= 12 && hInt <= 18) {
+        desc = "Tarde";
+      } else {
+        desc = "Noite";
+      }
+      const badge = document.getElementById("hora-badge");
+      badge.textContent = `${hInt.toString().padStart(2, '0')}:00 (${desc})`;
+      badge.className = `text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 ${cor}`;
+    }
+
+    function atualizarScore(s) {
+      const sInt = parseInt(s);
+      const dec = (sInt / 100).toFixed(2);
+      document.getElementById("score_dispositivo").value = dec;
+      const badge = document.getElementById("score-badge");
+
+      if (sInt >= 70) {
+        badge.textContent = `${sInt}% (Conhecido)`;
+        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400";
+      } else if (sInt >= 35) {
+        badge.textContent = `${sInt}% (Suspeito)`;
+        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400";
+      } else {
+        badge.textContent = `${sInt}% (Novo / Emulador)`;
+        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400";
+      }
+    }
+
+    function atualizarSegundos() {
+      const val = parseFloat(document.getElementById("tempo_input").value) || 0;
+      const un = document.getElementById("tempo_unidade").value;
+      let mult = 60;
+      if (un === "segundos") mult = 1;
+      if (un === "minutos") mult = 60;
+      if (un === "horas") mult = 3600;
+      if (un === "dias") mult = 86400;
+
+      document.getElementById("tempo_desde_ultima_transacao").value = (val * mult).toFixed(1);
+    }
+
+    // Cenários Pré-programados
+    function carregarCenario(tipo) {
+      gerarNovoId();
+      if (tipo === 'legit') {
+        document.getElementById("valor").value = "85.50";
+        document.getElementById("tipo_transacao").value = "PIX";
+        document.getElementById("hora_transacao").value = 14;
+        atualizarHora(14);
+        document.getElementById("tempo_input").value = "6";
+        document.getElementById("tempo_unidade").value = "horas";
+        atualizarSegundos();
+        document.getElementById("distancia_localizacao_km").value = "3.2";
+        document.getElementById("score_slider").value = 98;
+        atualizarScore(98);
+      } else if (tipo === 'review') {
+        document.getElementById("valor").value = "1250.00";
+        document.getElementById("tipo_transacao").value = "TED";
+        document.getElementById("hora_transacao").value = 22;
+        atualizarHora(22);
+        document.getElementById("tempo_input").value = "25";
+        document.getElementById("tempo_unidade").value = "minutos";
+        atualizarSegundos();
+        document.getElementById("distancia_localizacao_km").value = "45.0";
+        document.getElementById("score_slider").value = 45;
+        atualizarScore(45);
+      } else if (tipo === 'ato') {
+        document.getElementById("valor").value = "14850.00";
+        document.getElementById("tipo_transacao").value = "PIX";
+        document.getElementById("hora_transacao").value = 3;
+        atualizarHora(3);
+        document.getElementById("tempo_input").value = "15";
+        document.getElementById("tempo_unidade").value = "segundos";
+        atualizarSegundos();
+        document.getElementById("distancia_localizacao_km").value = "350.0";
+        document.getElementById("score_slider").value = 4;
+        atualizarScore(4);
+      } else if (tipo === 'viagem') {
+        document.getElementById("valor").value = "210.00";
+        document.getElementById("tipo_transacao").value = "CARTAO_CREDITO";
+        document.getElementById("hora_transacao").value = 15;
+        atualizarHora(15);
+        document.getElementById("tempo_input").value = "2";
+        document.getElementById("tempo_unidade").value = "minutos";
+        atualizarSegundos();
+        document.getElementById("distancia_localizacao_km").value = "2900.0";
+        document.getElementById("score_slider").value = 90;
+        atualizarScore(90);
+      }
+    }
+
+    async function verificarStatusAPI() {
+      try {
+        const res = await fetch("/");
+        const data = await res.json();
+        if (data.status === "healthy" && data.modelo_carregado) {
+          document.getElementById("status-pill").className = "flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-medium";
+          document.getElementById("status-text").textContent = "Motor Online (v" + data.versao + ")";
+        }
+      } catch (e) {
+        document.getElementById("status-pill").className = "flex items-center space-x-2 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 font-medium";
+        document.getElementById("status-text").textContent = "Reconectando...";
+      }
+    }
+
+    async function analisarTransacao(event) {
+      event.preventDefault();
+      const btn = document.getElementById("btn-submit");
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="inline-block animate-spin mr-2">🔄</span> Calculando Risco com Random Forest...`;
+
+      atualizarSegundos();
+
+      const payload = {
+        id_transacao: document.getElementById("id_transacao").value,
+        id_usuario: document.getElementById("id_usuario").value,
+        valor: parseFloat(document.getElementById("valor").value),
+        hora_transacao: parseInt(document.getElementById("hora_transacao").value),
+        tempo_desde_ultima_transacao: parseFloat(document.getElementById("tempo_desde_ultima_transacao").value),
+        distancia_localizacao_km: parseFloat(document.getElementById("distancia_localizacao_km").value),
+        score_dispositivo: parseFloat(document.getElementById("score_dispositivo").value),
+        tipo_transacao: document.getElementById("tipo_transacao").value
+      };
+
+      try {
+        const response = await fetch("/v1/analisar-fraude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          alert("Erro na validação: " + JSON.stringify(errData.detalhes || errData.detail));
+          return;
+        }
+
+        const data = await response.json();
+        exibirResultado(data, payload);
+      } catch (error) {
+        alert("Erro de conexão com o motor: " + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        lucide.createIcons();
+      }
+    }
+
+    function exibirResultado(data, payload) {
+      document.getElementById("placeholder-box").classList.add("hidden");
+      const resView = document.getElementById("resultado-view");
+      resView.classList.remove("hidden");
+
+      // Latência e IDs
+      document.getElementById("latencia-badge").textContent = `${data.latencia_ms.toFixed(1)} ms de inferência`;
+      document.getElementById("tx-id-display").textContent = data.id_transacao;
+      document.getElementById("timestamp-display").textContent = new Date(data.data_processamento).toLocaleTimeString("pt-BR");
+
+      // Veredito Visual & Ações
+      const container = document.getElementById("status-badge-container");
+      const iconSpan = document.getElementById("status-icon");
+      const nomeSpan = document.getElementById("status-nome");
+      const glow = document.getElementById("bg-glow");
+      const recBox = document.getElementById("recomendacao-box");
+      const recIcon = document.getElementById("rec-icon");
+      const recTitulo = document.getElementById("rec-titulo");
+      const recTexto = document.getElementById("rec-texto");
+      const barra = document.getElementById("score-barra");
+      const scoreNum = document.getElementById("score-numero");
+
+      scoreNum.textContent = `${data.score_risco.toFixed(1)} / 100`;
+      barra.style.width = `${Math.min(100, Math.max(2, data.score_risco))}%`;
+
+      if (data.status === "APROVADA") {
+        container.className = "inline-flex items-center space-x-2.5 px-6 py-2.5 rounded-2xl text-base font-extrabold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-emerald-500/20";
+        iconSpan.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6 text-emerald-400"></i>`;
+        nomeSpan.textContent = "TRANSAÇÃO APROVADA";
+        glow.className = "absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none";
+        barra.className = "h-full bg-emerald-500 rounded-full transition-all duration-700";
+        scoreNum.className = "text-lg font-black font-mono text-emerald-400";
+
+        recBox.className = "rounded-xl p-3.5 border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 flex items-start space-x-2.5";
+        recTitulo.textContent = "Recomendação Operacional:";
+        recTexto.textContent = "Operação segura. Liberar liquidação bancária imediatamente.";
+      } else if (data.status === "EM_ANALISE") {
+        container.className = "inline-flex items-center space-x-2.5 px-6 py-2.5 rounded-2xl text-base font-extrabold bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-amber-500/20";
+        iconSpan.innerHTML = `<i data-lucide="alert-triangle" class="w-6 h-6 text-amber-400"></i>`;
+        nomeSpan.textContent = "RETIDA EM ANÁLISE";
+        glow.className = "absolute -top-24 -right-24 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl pointer-events-none";
+        barra.className = "h-full bg-amber-500 rounded-full transition-all duration-700";
+        scoreNum.className = "text-lg font-black font-mono text-amber-400";
+
+        recBox.className = "rounded-xl p-3.5 border bg-amber-500/10 border-amber-500/30 text-amber-300 flex items-start space-x-2.5";
+        recTitulo.textContent = "Recomendação Operacional:";
+        recTexto.textContent = "Risco moderado. Exigir biometria facial, token push ou contato ativo (2FA).";
+      } else {
+        container.className = "inline-flex items-center space-x-2.5 px-6 py-2.5 rounded-2xl text-base font-extrabold bg-rose-600/20 border border-rose-500/40 text-rose-400 shadow-rose-500/20 animate-pulse";
+        iconSpan.innerHTML = `<i data-lucide="shield-x" class="w-6 h-6 text-rose-400"></i>`;
+        nomeSpan.textContent = "TRANSAÇÃO BLOQUEADA";
+        glow.className = "absolute -top-24 -right-24 w-64 h-64 bg-rose-500/20 rounded-full blur-3xl pointer-events-none";
+        barra.className = "h-full bg-rose-500 rounded-full transition-all duration-700";
+        scoreNum.className = "text-lg font-black font-mono text-rose-400";
+
+        recBox.className = "rounded-xl p-3.5 border bg-rose-500/10 border-rose-500/30 text-rose-300 flex items-start space-x-2.5";
+        recTitulo.textContent = "Recomendação Operacional:";
+        recTexto.textContent = "Bloqueio preventivo de emergência. Suspender chave/cartão e acionar mesa antifraude.";
+      }
+
+      document.getElementById("motivo-texto").textContent = data.motivo;
+      adicionarHistorico(data, payload);
+      lucide.createIcons();
+    }
+
+    function adicionarHistorico(data, payload) {
+      const tabela = document.getElementById("tabela-historico");
+      const emptyRow = document.getElementById("empty-row");
+      if (emptyRow) emptyRow.remove();
+
+      const tr = document.createElement("tr");
+      tr.className = "hover:bg-slate-800/40 transition-all";
+
+      const badgeColors = {
+        "APROVADA": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+        "EM_ANALISE": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+        "BLOQUEADA": "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+      };
+
+      const horaStr = new Date(data.data_processamento).toLocaleTimeString("pt-BR");
+      const valorStr = "R$ " + payload.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+
+      tr.innerHTML = `
+        <td class="py-3 px-4 text-slate-400">${horaStr}</td>
+        <td class="py-3 px-4 text-slate-300 font-semibold">${data.id_transacao}</td>
+        <td class="py-3 px-4 text-slate-400">${payload.id_usuario}</td>
+        <td class="py-3 px-4 text-slate-300">${payload.tipo_transacao}</td>
+        <td class="py-3 px-4 text-white font-bold">${valorStr}</td>
+        <td class="py-3 px-4 font-bold ${data.score_risco >= 80 ? 'text-rose-400' : (data.score_risco >= 30 ? 'text-amber-400' : 'text-emerald-400')}">${data.score_risco.toFixed(1)}</td>
+        <td class="py-3 px-4">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeColors[data.status] || ''}">${data.status}</span>
+        </td>
+        <td class="py-3 px-4 text-slate-400">${data.latencia_ms.toFixed(1)}ms</td>
+      `;
+
+      tabela.prepend(tr);
+    }
+
+    function limparHistorico() {
+      const tabela = document.getElementById("tabela-historico");
+      tabela.innerHTML = `<tr id="empty-row"><td colspan="8" class="text-center py-8 text-slate-500 font-sans">Nenhuma transação analisada nesta sessão ainda.</td></tr>`;
+    }
+  </script>
+</body>
+</html>
