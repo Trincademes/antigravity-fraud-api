@@ -1,0 +1,19 @@
+# ==============================================================================
+# Antigravity - Blueprint de Infraestrutura como Código (IaC) para o Render
+# Documentação oficial: https://render.com/docs/blueprint-spec
+# ==============================================================================
+services:
+  - type: web
+    name: antigravity-fraud-api
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt && python train_model.py
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: ENVIRONMENT
+        value: production
