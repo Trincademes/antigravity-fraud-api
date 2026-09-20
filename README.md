@@ -51,11 +51,18 @@ flowchart TD
 
 ```text
 antigravity/
-├── requirements.txt   # Especificação rígida de dependências de produção
-├── train_model.py     # Gerador sintético realista, treinamento e serialização
-├── main.py            # Servidor FastAPI com Lifespan, validação e endpoints
-├── fraud_model.pkl    # Artefato binário do modelo treinado (gerado no build/treino)
-└── README.md          # Manual técnico de arquitetura, execução e deploy
+├── render.yaml          # Blueprint de Infraestrutura como Código (Deploy 1-click no Render)
+├── Dockerfile           # Imagem conteinerizada de produção (non-root user, healthcheck)
+├── .dockerignore        # Otimização de contexto do build Docker
+├── requirements.txt     # Dependências estritas para produção no Render
+├── requirements-dev.txt # Dependências de desenvolvimento e testes (pytest, httpx, requests)
+├── train_model.py       # Gerador sintético com múltiplas tipologias, treino e serialização
+├── main.py              # API FastAPI com Lifespan, schemas Pydantic v2 e CORS
+├── test_api.py          # Suíte completa de testes unitários e integrados com Pytest
+├── simulate_client.py   # Simulador de streaming de transações com métricas no terminal
+├── fraud_model.pkl      # Artefato binário do modelo treinado (gerado no build/treino)
+├── .gitignore           # Exclusões para repositório Git
+└── README.md            # Manual técnico de arquitetura, execução e deploy
 ```
 
 ---
@@ -123,6 +130,20 @@ Inicie a API em modo de desenvolvimento:
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 Acesse a documentação interativa no navegador em: **[http://localhost:8000/docs](http://localhost:8000/docs)**
+
+### 6. Execução dos Testes Automatizados (Pytest)
+Para validar contratos, regras de negócio e validações Pydantic:
+
+```bash
+pytest test_api.py -v
+```
+
+### 7. Simulação de Streaming de Transações em Tempo Real
+Com a API rodando, execute o simulador cliente para testar cenários em lote com visualização de latência:
+
+```bash
+python simulate_client.py
+```
 
 ---
 
